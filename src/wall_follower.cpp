@@ -20,6 +20,7 @@
 #include "wall_follower/wall_follower.hpp"
 
 #include <memory>
+#include <fstream>
 
 
 using namespace std::chrono_literals;
@@ -60,8 +61,8 @@ WallFollower::WallFollower()
 	************************************************************/
 	update_timer_ = this->create_wall_timer(10ms, std::bind(&WallFollower::update_callback, this));
 
-	RCLCPP_INFO(this->get_logger(), "Wall follower node has been initialised");
 	RCLCPP_INFO(this->get_logger(), "Wall follower node has been initialised - Gurveer");
+	RCLCPP_INFO(this->get_logger(), "Wall follower node has been initialised");
 }
 
 WallFollower::~WallFollower()
@@ -95,9 +96,15 @@ void WallFollower::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
 	double current_y =  msg->pose.pose.position.y;
 	if (first)
 	{
+        RCLCPP_INFO(this->get_logger(), "hi there");
 		start_x = current_x;
 		start_y = current_y;
 		first = false;
+        std::ofstream f;
+        f.open("./out_wall.txt");
+        f << start_x << ", " << start_y << ", " << yaw << std::endl;
+        f.close();
+
 	}
 	else if (start_moving)
 	{
@@ -163,7 +170,6 @@ bool left_outer_turn = false;
 
 void WallFollower::update_callback()
 {
-
     // if (near_start) update_cmd_vel(0.0, 0.0);
     // else if (scan_data_[FRONT] < 0.35) update_cmd_vel(0, -0.8);
     // else if (scan_data_[LEFT_FRONT] > 0.7) {
@@ -214,10 +220,13 @@ void WallFollower::update_callback()
 
     double lower_radius = 0.2;
     double upper_radius = 0.35;
-
     // If at the start, stop.
     if (near_start) {
         RCLCPP_INFO(this->get_logger(), "Near start, stopping...");
+        // std::ofstream f;
+        // f.open("./out_wall.txt");
+        // f << start_x << ", " << start_y << ", " << yaw << std::endl;
+        // f.close();
         //std::cout << "Near start, stopping..." << std::endl;
         update_cmd_vel(0.0, 0.0);
         return;

@@ -1,3 +1,4 @@
 Terminal 1: ros2 launch turtlebot3_gazebo turtlebot3_maze.launch.py
 Terminal 2: ros2 launch turtlebot3_cartographer cartographer.launch.py use_sim_time:=True
 Terminal 3: ros2 launch wall_follower wall_follower.launch.py
+Save Map: ros2 run nav2_map_server map_saver_cli -f ./my_map --ros-args -p save_map_timeout:=100000

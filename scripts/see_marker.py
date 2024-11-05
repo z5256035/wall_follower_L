@@ -24,6 +24,7 @@ from wall_follower.landmark import marker_type
 
 field_of_view_h = 62.2
 field_of_view_v = 48.8
+markers = {}
 
 
 class SeeMarker(Node):
@@ -94,9 +95,11 @@ class SeeMarker(Node):
 					if c_y < pink_y:	# +y is down
 #						print(c, "/ pink", f'{c_d:.2f}, {c_a:.2f}')
 						marker_at.point.z = float(marker_type.index(c + '/pink'))
+						markers.update({f"{c}/pink": [marker_at.point.x, marker_at.point.y]})
 					else:
 #						print("pink / ", c, f'{p_d:.2f}, {p_a:.2f}')
 						marker_at.point.z = float(marker_type.index('pink/' + c))
+						markers.update({f"pink/{c}": [marker_at.point.x, marker_at.point.y]})
 					
 					x, y = polar_to_cartesian(c_d, c_a)
 
@@ -109,6 +112,7 @@ class SeeMarker(Node):
 
 #					print(f'Camera coordinates: {x}, {y}')
 					self.point_publisher.publish(marker_at)
+					
 					self.get_logger().info('Published Point: x=%f, y=%f, z=%f colour=%s distance=%f' %
 						(marker_at.point.x, marker_at.point.y, marker_at.point.z, c, measured_d))
 
@@ -210,6 +214,11 @@ def main(args=None):
 	
 	# Spin the node so the callback function is called.
 	rclpy.spin(see_marker)
+
+	f = open("./out_wall.txt", "a")
+	for marker in markers.keys():
+		f.write(f"{markers[marker][0]}, {markers[marker][1]}, {marker}\n")
+	f.close()
 	
 	# Destroy the node explicitly
 	# (optional - otherwise it will be done automatically
