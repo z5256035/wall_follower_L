@@ -16,6 +16,7 @@ import math
 from sensor_msgs.msg import Image # Image is the message type
 from sensor_msgs.msg import LaserScan # Laser scan message type
 from sensor_msgs.msg import CameraInfo # Need to know camera frame
+from std_msgs.msg import String
 from geometry_msgs.msg import Point, PointStamped
 
 import wall_follower.landmark
@@ -25,6 +26,7 @@ from wall_follower.landmark import marker_type
 field_of_view_h = 62.2
 field_of_view_v = 48.8
 markers = {}
+not_logged = True
 
 
 class SeeMarker(Node):
@@ -41,21 +43,40 @@ class SeeMarker(Node):
 		self.range = 0
 		self.prev_h = 0
 		self.prev_r = 0
+
 			
 		# Create the subscriber. This subscriber will receive an Image
 		# from the video_frames topic. The queue size is 10 messages.
 		self.subscription = self.create_subscription(
 			Image,
-			'/camera/image_raw/uncompressed', 
+			'/camera/image_raw', 
 			self.listener_callback, 
 			10)
 		self.subscription # prevent unused variable warning
+
+		self.should_print = self.create_subscription(
+			String,
+			'/n_start',
+			self.stop_now,
+			10
+		)
+		self.should_print
+
 			
 		# Used to convert between ROS and OpenCV images
 		self.br = CvBridge()
 
 		self.point_publisher = self.create_publisher(PointStamped, '/marker_position', 10)
 
+	def stop_now(self, data):
+		if not_logged:
+			self.get_logger().info("Logging Markers")
+			f = open("./out_wall.csv", "a")
+			for marker in markers.keys():
+				f.write(f"{markers[marker][0]}, {markers[marker][1]}, {marker}\n")
+			f.close()
+			not_logged = False
+			
 
 	def listener_callback(self, data):
 		"""
@@ -93,13 +114,9 @@ class SeeMarker(Node):
 					marker_at.header.frame_id = 'camera_link'
 
 					if c_y < pink_y:	# +y is down
-#						print(c, "/ pink", f'{c_d:.2f}, {c_a:.2f}')
 						marker_at.point.z = float(marker_type.index(c + '/pink'))
-						markers.update({f"{c}/pink": [marker_at.point.x, marker_at.point.y]})
 					else:
-#						print("pink / ", c, f'{p_d:.2f}, {p_a:.2f}')
 						marker_at.point.z = float(marker_type.index('pink/' + c))
-						markers.update({f"pink/{c}": [marker_at.point.x, marker_at.point.y]})
 					
 					x, y = polar_to_cartesian(c_d, c_a)
 
@@ -116,6 +133,8 @@ class SeeMarker(Node):
 					self.get_logger().info('Published Point: x=%f, y=%f, z=%f colour=%s distance=%f' %
 						(marker_at.point.x, marker_at.point.y, marker_at.point.z, c, measured_d))
 
+					markers.update({marker_type[int(marker_at.point.z)]: [marker_at.point.x, marker_at.point.y]})
+					self.get_logger().info(str(markers))
 
 		# Display camera image
 		cv2.imshow("camera", current_frame)	
@@ -123,10 +142,10 @@ class SeeMarker(Node):
 
 
 colours = {
-	"pink":	 	((140,50,50), (170, 255, 255)),
-	"blue":		((95,175,130), (105, 200, 160)),
-	"green":	((65,160,65), (85, 195, 95)),
-	"yellow":	((25,0,0), (30, 255, 255))
+	"pink":	 	((140,0,0), (170, 255, 255)),
+	"blue":		((100,0,0), (130, 255, 255)),
+	"green":	((40,0,0), (80, 255, 255)),
+	"yellow":	((25,0,0), (32, 255, 255))
 }
 
 
@@ -214,11 +233,6 @@ def main(args=None):
 	
 	# Spin the node so the callback function is called.
 	rclpy.spin(see_marker)
-
-	f = open("./out_wall.txt", "a")
-	for marker in markers.keys():
-		f.write(f"{markers[marker][0]}, {markers[marker][1]}, {marker}\n")
-	f.close()
 	
 	# Destroy the node explicitly
 	# (optional - otherwise it will be done automatically
